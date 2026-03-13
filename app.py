@@ -664,6 +664,24 @@ def update_business_name(biz_id):
         flash(f"Business renamed to {new_name}", "success")
     return redirect(url_for('profile'))
 
+#---------------Setup admin access-------------
+@app.route('/setup_admin_access')
+def setup_admin_access():
+    # This specifically targets your live usernames
+    users_to_elevate = ['tanvi', 'tanvi_kadve']
+    updated = []
+    
+    for username in users_to_elevate:
+        user = User.query.filter_by(username=username).first()
+        if user:
+            user.role = 'admin'
+            updated.append(username)
+    
+    if updated:
+        db.session.commit()
+        return f"Success! Elevated: {', '.join(updated)}. Now log out and log back in."
+    return "No users found. Did you register those usernames on the LIVE site yet?"
+
 # ---------------- LOGOUT ----------------
 @app.route('/logout')
 def logout():
