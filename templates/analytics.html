@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="analytics-header">
+    <h1 style="color: #00adb5;">📊 Business Intelligence & AI Insights</h1>
+    <p style="color: #888;">Advanced forecasting and performance metrics for your business profile.</p>
+</div>
+
+<div class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div class="card metric-card" style="text-align: center; padding: 20px; border-top: 4px solid #00adb5;">
+        <h3>Profit Margin</h3>
+        <div class="metric-value" style="color: #00adb5; font-size: 32px; font-weight: bold; margin: 10px 0;">
+            {{ profit_margin | default(0) }}%
+        </div>
+        <p style="font-size: 12px; color: #888;">Efficiency of your sales</p>
+    </div>
+
+    <div class="card metric-card" style="text-align: center; padding: 20px; border-top: 4px solid #2ecc71;">
+        <h3>Growth Status</h3>
+        <div class="metric-value {% if growth_percent >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 32px; font-weight: bold; margin: 10px 0;">
+            {{ growth_percent | default(0) }}% {% if growth_percent >= 0 %}↗️{% else %}↘️{% endif %}
+        </div>
+        <p style="font-size: 12px; color: #888;">Month-over-month trend</p>
+    </div>
+
+    <div class="card metric-card" style="text-align: center; padding: 20px; border-top: 4px solid #f1c40f;">
+        <h3>Forecasted Profit</h3>
+        <div class="metric-value" style="color: #f1c40f; font-size: 32px; font-weight: bold; margin: 10px 0;">
+            ₹ {{ "{:,.2f}".format(next_month_val | default(0)) }}
+        </div>
+        <p style="font-size: 12px; color: #888;">AI prediction for next month</p>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div class="card" style="text-align: left; padding: 20px;">
+        <h2 style="color: #00adb5; font-size: 18px; margin-bottom: 20px;">📈 Performance Trend</h2>
+        <div class="chart-wrapper" style="height: 300px; position: relative;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card" style="text-align: left; padding: 20px;">
+        <h2 style="color: #00adb5; font-size: 18px; margin-bottom: 20px;">🍕 Margin Analysis</h2>
+        <div class="chart-wrapper" style="height: 300px; position: relative;">
+            <canvas id="costPieChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="text-align: left; border-bottom: 4px solid #f39c12; padding: 20px; background: linear-gradient(180deg, #1e1e1e 0%, #121212 100%);">
+    <h2 style="color: #f39c12; font-size: 18px; margin-bottom: 20px;">🤖 AI Predictive Forecast (Next 6 Months)</h2>
+    <div class="chart-wrapper" style="height: 350px; position: relative;">
+        <canvas id="forecastChart"></canvas>
+    </div>
+    
+    <div style="background: rgba(0, 173, 181, 0.1); padding: 20px; border-radius: 10px; border-left: 5px solid #00adb5; margin-top: 25px;">
+        <p style="margin: 0; color: #eee;">
+            <strong style="color: #00adb5;">💡 Actionable Insight:</strong> 
+            {% if growth_percent and growth_percent > 0 %}
+                Your business is on an upward trajectory. Maintain inventory to meet the predicted 
+                <strong>₹ {{ "{:,.2f}".format(next_month_val) }}</strong> in profit.
+            {% elif profit_margin %}
+                Slight decline detected or stability reached. Consider reviewing your expense categories 
+                to protect your {{ profit_margin }}% margin.
+            {% else %}
+                Start logging transactions to see AI-driven insights here!
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="card" style="padding: 25px; background: #1a1a1a; border: 1px dashed #333;">
+        <h3 style="color: #fff; font-size: 16px; margin-bottom: 15px;">📥 Export Financial Intelligence</h3>
+        <form action="{{ url_for('export_data', format='pdf') }}" method="GET" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex-grow: 1; min-width: 200px;">
+                <label style="font-size: 11px; color: #666; letter-spacing: 1px;">REPORT PERIOD</label>
+                <select name="month" style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: white; border-radius: 6px;">
+                    <option value="all">Full Business History (All Time)</option>
+                    <option value="01">January 2026</option>
+                    <option value="02">February 2026</option>
+                    <option value="03" selected>March 2026 (Current)</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" style="background: #e74c3c; color: white; padding: 12px 25px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer;">
+                    Download PDF
+                </button>
+                <a href="{{ url_for('export_data', format='csv') }}" style="background: #27ae60; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;"> Export CSV</a>
+                <a href="{{ url_for('export_data', format='excel') }}" style="background: #2980b9; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">Export Excel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// JSON Data with Fail-safes
+const monthlyData = {{ monthly_chart | tojson }} || [];
+const forecastData = {{ forecast_data | tojson }} || [];
+
+Chart.defaults.color = '#bbb';
+Chart.defaults.borderColor = '#333';
+
+// 1. TREND CHART
+if(monthlyData.length > 0) {
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(x => x[0]),
+            datasets: [
+                {
+                    label: 'Income',
+                    data: monthlyData.map(x => x[1]),
+                    borderColor: '#2ecc71',
+                    tension: 0.4
+                },
+                {
+                    label: 'Profit',
+                    data: monthlyData.map(x => x[3]),
+                    borderColor: '#00adb5',
+                    borderWidth: 3,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+// 2. PIE CHART
+const pMargin = {{ profit_margin | default(0) }};
+new Chart(document.getElementById('costPieChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Net Profit %', 'Costs %'],
+        datasets: [{
+            data: [pMargin, Math.max(0, 100 - pMargin)],
+            backgroundColor: ['#00adb5', '#e74c3c'],
+            borderWidth: 0
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+// 3. AI FORECAST
+if(monthlyData.length > 0 && forecastData.length > 0) {
+    const pastLabels = monthlyData.map(x => x[0]);
+    const pastProfit = monthlyData.map(x => x[3]);
+    const futureLabels = forecastData.map(x => x[0]);
+    const futureValues = forecastData.map(x => x[1]);
+
+    new Chart(document.getElementById('forecastChart'), {
+        type: 'line',
+        data: {
+            labels: [...pastLabels, ...futureLabels],
+            datasets: [
+                {
+                    label: 'Historical',
+                    data: [...pastProfit, ...new Array(futureValues.length).fill(null)],
+                    borderColor: '#666',
+                    borderWidth: 2
+                },
+                {
+                    label: 'AI Prediction',
+                    data: new Array(pastProfit.length - 1).fill(null).concat([pastProfit[pastProfit.length - 1], ...futureValues]),
+                    borderColor: '#f39c12',
+                    borderDash: [5, 5],
+                    borderWidth: 4,
+                    fill: true,
+                    backgroundColor: 'rgba(243, 156, 18, 0.05)'
+                }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+</script>
+{% endblock %}

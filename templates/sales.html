@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container" style="max-width: 600px; margin: auto;">
+    <h2 style="color: #00adb5;">💰 Record a New Sale</h2>
+    <p style="color: #888; margin-bottom: 25px;">Select a product and the quantity. Stock will be updated automatically.</p>
+
+    <form method="POST" id="salesForm">
+        <label for="product_id">Select Product:</label>
+        <select name="product_id" id="product_id" required onchange="updateMaxQuantity()">
+            <option value="" disabled selected>-- Choose a Product --</option>
+            {% for product in products %}
+                <option value="{{ product.id }}" data-price="{{ product.sale_price }}" data-stock="{{ product.stock }}">
+                    {{ product.name }} (Available: {{ product.stock }} | Price: ₹{{ product.sale_price }})
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="quantity">Quantity Sold:</label>
+        <input type="number" name="quantity" id="quantity" min="1" placeholder="Enter quantity" required oninput="calculateTotal()">
+
+        <div id="price-preview" style="background: #121212; border: 1px dashed #333; padding: 15px; border-radius: 8px; margin: 15px 0; display: none;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #888;">Unit Price:</span>
+                <span id="unit-price" style="color: #fff;">₹0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; border-top: 1px solid #333; pt-10;">
+                <span style="color: #00adb5;">Total Sale:</span>
+                <span id="total-price" style="color: #00adb5;">₹0.00</span>
+            </div>
+        </div>
+
+        <label for="date_picker">Sale Date:</label>
+        <input type="date" name="date" id="date_picker" class="form-control" required>
+        
+        <button type="submit" class="btn-submit" style="margin-top: 20px; background-color: #00adb5; color: white; width: 100%; border-radius: 5px; height: 45px; border: none; font-weight: bold; cursor: pointer;">
+            Confirm Sale & Update Inventory
+        </button>
+    </form>
+</div>
+
+<script>
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date_picker').value = today;
+
+    function updateMaxQuantity() {
+        const select = document.getElementById('product_id');
+        const quantityInput = document.getElementById('quantity');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        // Update max attribute based on stock
+        const stock = selectedOption.getAttribute('data-stock');
+        quantityInput.max = stock;
+        
+        // Show price preview box
+        document.getElementById('price-preview').style.display = 'block';
+        
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        const select = document.getElementById('product_id');
+        const quantity = document.getElementById('quantity').value;
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (selectedOption.value) {
+            const price = parseFloat(selectedOption.getAttribute('data-price'));
+            const unitPriceElem = document.getElementById('unit-price');
+            const totalPriceElem = document.getElementById('total-price');
+            
+            unitPriceElem.innerText = '₹' + price.toLocaleString();
+            totalPriceElem.innerText = '₹' + (price * quantity).toLocaleString();
+        }
+    }
+</script>
+
+<style>
+    /* Ensure the date picker matches the dark theme */
+    input[type="date"] {
+        background: #252525;
+        color: white;
+        border: 1px solid #333;
+    }
+</style>
+{% endblock %}

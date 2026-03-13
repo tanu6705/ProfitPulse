@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales & Profit Analyzer | AI-Driven Insights</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="sidebar">
+        <h2 style="color: #00adb5;">🚀 ProfitPulse</h2>
+        
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}">📊 Dashboard</a></li>
+                <hr style="border: 0.5px solid #333; margin: 10px 0;">
+                
+                <li style="font-size: 11px; color: #888; text-transform: uppercase; margin-left: 10px; letter-spacing: 1px;">Operations</li>
+                <li><a href="{{ url_for('inventory') }}">📦 Inventory Mgr</a></li>
+                <li><a href="{{ url_for('sales') }}">💰 Record Sale</a></li>
+                <li><a href="{{ url_for('log_transaction') }}">📉 Log Expense</a></li>
+                
+                {% if user_role == 'admin' %}
+                <li style="border-left: 3px solid #f1c40f; margin-top: 10px;">
+                    <a href="{{ url_for('admin_users') }}" style="color: #f1c40f;">🛡️ Admin Panel</a>
+                </li>
+                {% endif %}
+                
+                <hr style="border: 0.5px solid #333; margin: 10px 0;">
+                
+                <li style="font-size: 11px; color: #888; text-transform: uppercase; margin-left: 10px; letter-spacing: 1px;">Intelligence</li>
+                <li><a href="{{ url_for('analytics') }}">📈 AI Analytics</a></li>
+
+                <hr style="border: 0.5px solid #333; margin: 10px 0;">
+        <li style="font-size: 11px; color: #888; text-transform: uppercase; margin-left: 10px; letter-spacing: 1px;">Account</li>
+        <li><a href="{{ url_for('profile') }}">👤 My Profile</a></li>
+                
+                 <li style="margin-top: 50px;"><a href="{{ url_for('logout') }}" style="color: #ff4d4d;">🚪 Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-container" style="margin-bottom: 20px;">
+              {% for category, message in messages %}
+                <div class="badge {% if category == 'danger' or category == 'error' %}expense{% else %}sale{% endif %}" 
+                     style="display: block; padding: 15px; border-radius: 8px; margin-bottom: 10px; font-weight: 600; text-align: left; border-left: 5px solid rgba(0,0,0,0.2);">
+                    {{ "✅" if category == 'success' else "⚠️" }} {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}
+        {% endblock %}
+        
+    </div>
+</div>
+</body>
+</html>

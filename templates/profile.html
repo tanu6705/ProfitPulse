@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="management-grid" style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 30px; padding: 20px;">
+
+    <div class="account-sidebar">
+        <div class="card" style="text-align: left; padding: 25px; border-top: 4px solid #00adb5; background: #1e1e1e; margin-bottom: 25px;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                <div style="width: 50px; height: 50px; background: #00adb5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;">
+                    {{ user.username[0]|upper }}
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 20px; color: #fff;">{{ user.username }}</h2>
+                    <span class="badge" style="background: rgba(0, 173, 181, 0.1); color: #00adb5; border: 1px solid #00adb5;">{{ user.role.upper() }}</span>
+                </div>
+            </div>
+            <div class="readonly-box" style="font-size: 13px; color: #888;">Registered Email: <span style="color: #ddd;">{{ user.email }}</span></div>
+        </div>
+
+        <div class="card" style="padding: 25px; background: #1e1e1e;">
+            <h3 style="color: #fff; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                🔐 Security Update
+            </h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 20px;">Update your password regularly to keep your business data safe.</p>
+
+            <form action="{{ url_for('change_password') }}" method="POST">
+                <label>CURRENT PASSWORD</label>
+                <input type="password" name="current_password" placeholder="Verify old password" required 
+                       style="margin-bottom: 15px; background: #121212;">
+                
+                <label>NEW PASSWORD</label>
+                <input type="password" name="new_password" placeholder="Min. 8 characters" required 
+                       style="margin-bottom: 20px; background: #121212;">
+                
+                <button type="submit" style="background: #00adb5; font-size: 14px;">Update Security Key</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="entity-management">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #fff;">🏢 Managed Entities</h2>
+            <a href="{{ url_for('add_business') }}" class="btn-restock" style="background: #27ae60; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">+ Register New Entity</a>
+        </div>
+
+        <div class="entity-list">
+            {% for biz in user_businesses %}
+            {% set is_active = (biz.id == session.get('active_business_id')) %}
+            
+            <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 20px; border-bottom: none; border-left: 4px solid {% if is_active %}#2ecc71{% else %}#333{% endif %};">
+                <div style="padding: 20px; background: {% if is_active %}rgba(46, 204, 113, 0.05){% else %}#1e1e1e{% endif %};">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <form action="{{ url_for('update_business_name', biz_id=biz.id) }}" method="POST" style="flex-grow: 1;">
+                            <label style="font-size: 10px; letter-spacing: 1px;">ENTITY NAME</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="new_name" value="{{ biz.name }}" 
+                                       style="background: transparent; border: none; border-bottom: 1px solid #444; font-size: 20px; font-weight: bold; color: #fff; width: 60%; padding: 5px 0; margin: 0;">
+                                <button type="submit" style="width: auto; margin: 0; padding: 5px 10px; background: #333; font-size: 12px;">Rename</button>
+                            </div>
+                        </form>
+
+                        {% if is_active %}
+                            <div class="badge-success" style="padding: 5px 12px; border-radius: 20px; font-size: 10px; background: #2ecc71; color: #000;">ACTIVE SESSION</div>
+                        {% endif %}
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: #666; font-size: 12px;">
+                            <span style="color: #00adb5;">ID: #{{ biz.id }}</span> | 
+                            <span>Established: {{ biz.created_at.strftime('%b %Y') if biz.created_at else 'Mar 2026' }}</span>
+                        </div>
+
+                        {% if not is_active %}
+                            <a href="{{ url_for('switch_business', biz_id=biz.id) }}" class="btn-restock" style="color: #00adb5; font-weight: bold; font-size: 14px; text-decoration: none;">
+                                Switch Workspace →
+                            </a>
+                        {% else %}
+                            <span style="color: #2ecc71; font-size: 14px;">✓ Currently Viewing</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

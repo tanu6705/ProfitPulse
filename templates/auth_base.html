@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Profit Analyzer | Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-body">
+
+    <div class="auth-container">
+        <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #00adb5; margin-bottom: 5px;">📊 ProfitPulse</h1>
+            <p style="color: #888; font-size: 14px;">Smart Multi-Business Management</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages">
+              {% for category, message in messages %}
+                <div class="badge {% if category == 'danger' or category == 'error' %}expense{% else %}sale{% endif %}" 
+                     style="display: block; padding: 12px; border-radius: 5px; margin-bottom: 20px; text-align: center; font-size: 14px;">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="auth-content">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        <div class="auth-footer" style="text-align: center; margin-top: 25px; font-size: 12px; color: #555;">
+            &copy; 2024 Sales & Profit Analyzer AI. All rights reserved.
+        </div>
+    </div>
+
+</body>
+</html>

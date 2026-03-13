@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Dropdown Styling */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        left: 0; /* Aligned to left as requested */
+        background-color: #252525;
+        min-width: 220px;
+        box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+        z-index: 100;
+        border: 1px solid #444;
+        border-radius: 8px;
+    }
+    .dropdown:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+        color: white;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        border-bottom: 1px solid #333;
+    }
+    .dropdown-content a:hover { background-color: #333; }
+    .chart-container { background: #1a1a1a; padding: 20px; border-radius: 10px; margin-top: 20px; }
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="dashboard-header" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
+        <div class="business-selector">
+            <div class="dropdown">
+                <button class="badge sale" style="padding: 12px 20px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 1.1em;">
+                    🔄 {{ active_biz.name if active_biz else 'Select Business' }} ▼
+                </button>
+                <div class="dropdown-content">
+                    {% for biz in user_businesses %}
+                        <a href="{{ url_for('switch_business', biz_id=biz.id) }}">
+                            {{ biz.name }} {% if active_biz and biz.id == active_biz.id %} <span style="color: #00adb5; float: right;">●</span> {% endif %}
+                        </a>
+                    {% endfor %}
+                    <a href="{{ url_for('add_business') }}" style="color: #00adb5; border-bottom: none;">+ Add New Business</a>
+                </div>
+            </div>
+        </div>
+        <p style="color: #888; margin-top: 10px;">Managing performance and records for your active profile.</p>
+    </div>
+
+    
+    <div class="dashboard-cards">
+        <div class="card">
+            <h3>Total Sales</h3>
+            <p class="amount">₹ {{ "{:,.2f}".format(sales) }}</p>
+        </div>
+        <div class="card">
+            <h3>Other Income</h3>
+            <p class="amount" style="color: #2ecc71;">₹ {{ "{:,.2f}".format(income) }}</p>
+        </div>
+        <div class="card">
+            <h3>Total Expenses</h3>
+            <p class="amount" style="color: #e74c3c;">₹ {{ "{:,.2f}".format(expense) }}</p>
+        </div>
+        <div class="card profit-card">
+            <h3>Net Profit</h3>
+            <p class="amount" style="color: #00adb5;">₹ {{ "{:,.2f}".format(profit) }}</p>
+        </div>
+    </div>
+
+    <div class="chart-container card">
+        <h2 style="color: #00adb5; margin-bottom: 20px;">Monthly Comparison</h2>
+        <div style="height: 350px;">
+            <canvas id="monthlyTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="table-section card" style="margin-top: 30px; overflow-x: auto;">
+        <h2 style="color: #00adb5; margin-bottom: 20px;">Transaction Records</h2>
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid #444; text-align: left;">
+                    <th style="padding: 12px;">Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sales_records %}
+                <tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 12px;">{{ s.date.strftime('%Y-%m-%d') if s.date else 'N/A' }}</td>
+                    <td>{{ s.product_name }}</td>
+                    <td><span class="badge sale">Sale</span></td>
+                    <td>₹ {{ "{:,.2f}".format(s.total_amount) }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_sale', id=s.id) }}" class="text-danger" onclick="return confirm('Delete this sale?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% for t in transactions %}
+                <tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 12px;">{{ t.date.strftime('%Y-%m-%d') if t.date else 'N/A' }}</td>
+                    <td>{{ t.title }}</td>
+                    <td><span class="badge {{ t.type }}">{{ t.type|capitalize }}</span></td>
+                    <td>₹ {{ "{:,.2f}".format(t.amount) }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_transaction', id=t.id) }}" class="text-danger" onclick="return confirm('Delete this transaction?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels | tojson | default([]) }},
+            datasets: [
+                {
+                    label: 'Income & Sales',
+                    backgroundColor: '#00adb5',
+                    data: {{ chart_income | tojson | default([]) }}
+                },
+                {
+                    label: 'Expenses',
+                    backgroundColor: '#e74c3c',
+                    data: {{ chart_expense | tojson | default([]) }}
+                },
+                {
+                    label: 'Profit',
+                    type: 'line',
+                    borderColor: '#f1c40f',
+                    borderWidth: 3,
+                    fill: false,
+                    data: {{ chart_profit | tojson | default([]) }}
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#fff' } } },
+            scales: {
+                y: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                x: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+            }
+        }
+    });
+</script>
+{% endblock %}

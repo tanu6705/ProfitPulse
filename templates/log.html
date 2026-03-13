@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container" style="max-width: 800px; margin: auto;">
+    <h2 style="color: #00adb5;">📉 Log Transaction</h2>
+    <p style="color: #888; margin-bottom: 25px;">Record non-inventory expenses (like rent) or miscellaneous income.</p>
+
+    <div class="card" style="padding: 25px; margin-bottom: 40px;">
+        <form method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label for="title">Description:</label>
+                    <input type="text" name="title" id="title" placeholder="e.g., Shop Rent, Electricity" required>
+                </div>
+                
+                <div>
+                    <label for="type">Transaction Type:</label>
+                    <select name="type" id="type" required style="border-left: 5px solid #00adb5;">
+                        <option value="expense" style="color: #e74c3c;">Expense (Money Out 💸)</option>
+                        <option value="income" style="color: #2ecc71;">Other Income (Money In 💰)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                <div>
+                    <label for="date_picker">Transaction Date:</label>
+                    <input type="date" name="date" id="date_picker" required>
+                </div>
+
+                <div>
+                    <label for="amount">Amount (₹):</label>
+                    <input type="number" step="0.01" name="amount" id="amount" placeholder="0.00" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit" style="margin-top: 25px; background: #00adb5;">
+                Add Transaction to Records
+            </button>
+        </form>
+    </div>
+
+    <div class="bulk-upload-section" style="background: #1e1e1e; padding: 25px; border-radius: 12px; border: 2px dashed #333;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="color: #00adb5; margin: 0;">📤 Bulk CSV Import</h3>
+            <a href="#" style="font-size: 12px; color: #00adb5; text-decoration: none;">Download Template.csv</a>
+        </div>
+        <p style="font-size: 13px; color: #888; margin-top: 10px;">
+            Columns: <strong>Title, Type (income/expense), Amount, Date (YYYY-MM-DD)</strong>
+        </p>
+        
+        <form action="{{ url_for('upload_csv') }}" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" id="csv_file" accept=".csv" required 
+                   style="margin: 20px 0; color: #fff; display: block;" onchange="previewCSV(event)">
+            
+            <div id="preview-container" style="display: none; margin-top: 15px;">
+                <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px;">Data Preview:</h4>
+                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #333; border-radius: 8px; background: #121212;">
+                    <table id="preview-table" class="data-table" style="width: 100%; font-size: 12px; margin-top: 0;">
+                        <thead style="position: sticky; top: 0; background: #252525;"></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button type="submit" id="upload-btn" style="background: #27ae60; margin-top: 20px; display: none; font-weight: bold;">
+                Confirm & Upload to Database
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date_picker').value = today;
+
+    function previewCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const contents = e.target.result;
+            const rows = contents.split('\n').filter(row => row.trim() !== "");
+            
+            const tableHead = document.querySelector('#preview-table thead');
+            const tableBody = document.querySelector('#preview-table tbody');
+            const container = document.getElementById('preview-container');
+            const uploadBtn = document.getElementById('upload-btn');
+
+            tableHead.innerHTML = "";
+            tableBody.innerHTML = "";
+
+            if (rows.length > 0) {
+                const headers = rows[0].split(',');
+                let headerRow = "<tr>";
+                headers.forEach(h => headerRow += `<th style="padding: 10px; color: #00adb5; text-align: left;">${h.trim()}</th>`);
+                tableHead.innerHTML = headerRow + "</tr>";
+
+                rows.slice(1, 6).forEach(row => { // Show first 5 rows
+                    const cols = row.split(',');
+                    let bodyRow = "<tr>";
+                    cols.forEach(c => bodyRow += `<td style="padding: 10px; border-bottom: 1px solid #222;">${c.trim()}</td>`);
+                    tableBody.innerHTML += bodyRow + "</tr>";
+                });
+
+                container.style.display = "block";
+                uploadBtn.style.display = "block";
+            }
+        };
+        reader.readAsText(file);
+    }
+</script>
+{% endblock %}

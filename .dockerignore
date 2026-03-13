@@ -1,0 +1,24 @@
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Version control
+.git/
+.gitignore
+
+# Environment variables (Sensitive info)
+.env
+
+# Database (Optional - see note below)
+*.db
+
+# OS specific files
+.DS_Store
+Thumbs.db
