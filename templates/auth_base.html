@@ -10,10 +10,12 @@
 <body class="auth-body">
 
     <div class="auth-container">
+        {% if request.path != url_for('index') %}
         <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #00adb5; margin-bottom: 5px;">📊 ProfitPulse</h1>
             <p style="color: #888; font-size: 14px;">Smart Multi-Business Management</p>
         </div>
+        {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}

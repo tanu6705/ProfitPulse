@@ -1,8 +1,22 @@
 Title,Type,Amount,Date
-Office Rent,expense,5000,2026-03-01
-Consultation Fee,income,2500,2026-03-05
-Electricity Bill,expense,1200,2026-03-10
-Bank Interest,income,150,2026-03-12
-Packaging Materials,expense,450,2026-03-15
-Website Subscription,expense,900,2026-03-18
-Maintenance Project,income,3200,2026-03-20
+Shop Rent January,expense,1200.00,2026-01-01
+Electricity Bill,expense,150.00,2026-01-05
+SwiftTab Sales,income,897.00,2026-01-05
+USB-C Cable Sales,income,225.00,2026-01-12
+Internet Subscription,expense,60.00,2026-01-15
+Earbud Sales,income,295.00,2026-01-20
+Laptop Sale,income,1199.00,2026-01-28
+Shop Rent February,expense,1200.00,2026-02-01
+Social Media Marketing,expense,200.00,2026-02-02
+Gift Earbud Sales,income,472.00,2026-02-02
+OmniWatch Sales,income,1194.00,2026-02-10
+USB-C Cable Bulk Sale,income,300.00,2026-02-14
+Packaging Supplies,expense,45.00,2026-02-15
+Smart TV Sales,income,998.00,2026-02-22
+Shop Rent March,expense,1200.00,2026-03-01
+New Stock Shipment Fee,expense,350.00,2026-03-03
+Keyboard Bulk Sale,income,1068.00,2026-03-05
+Electricity Bill,expense,165.00,2026-03-08
+USB-C Cable Sales,income,375.00,2026-03-12
+Earbud Peak Sales,income,885.00,2026-03-20
+Laptop Multi-Sale,income,3597.00,2026-03-28

@@ -14,6 +14,9 @@ class User(db.Model):
     
     # Relationships
     businesses = db.relationship('Business', backref='owner',cascade="all, delete-orphan", lazy=True)
+
+    last_login = db.Column(db.DateTime)
+    last_logout = db.Column(db.DateTime)
     
 
 class Business(db.Model):

@@ -82,7 +82,8 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             const contents = e.target.result;
-            const rows = contents.split('\n').filter(row => row.trim() !== "");
+            // Split by newline and filter out empty strings
+            const rows = contents.split(/\r?\n/).filter(row => row.trim() !== "");
             
             const tableHead = document.querySelector('#preview-table thead');
             const tableBody = document.querySelector('#preview-table tbody');
@@ -93,16 +94,21 @@
             tableBody.innerHTML = "";
 
             if (rows.length > 0) {
+                // Parse Headers
                 const headers = rows[0].split(',');
                 let headerRow = "<tr>";
                 headers.forEach(h => headerRow += `<th style="padding: 10px; color: #00adb5; text-align: left;">${h.trim()}</th>`);
                 tableHead.innerHTML = headerRow + "</tr>";
 
-                rows.slice(1, 6).forEach(row => { // Show first 5 rows
+                // Parse ALL Data Rows (Starting from index 1)
+                rows.slice(1).forEach(row => {
                     const cols = row.split(',');
-                    let bodyRow = "<tr>";
-                    cols.forEach(c => bodyRow += `<td style="padding: 10px; border-bottom: 1px solid #222;">${c.trim()}</td>`);
-                    tableBody.innerHTML += bodyRow + "</tr>";
+                    // Only render rows that match the header length to avoid broken data
+                    if (cols.length === headers.length) {
+                        let bodyRow = "<tr>";
+                        cols.forEach(c => bodyRow += `<td style="padding: 10px; border-bottom: 1px solid #222;">${c.trim()}</td>`);
+                        tableBody.innerHTML += bodyRow + "</tr>";
+                    }
                 });
 
                 container.style.display = "block";

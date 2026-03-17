@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from flask import send_file
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, Response, session
+from flask import Flask,jsonify, render_template, request, redirect, url_for, flash, Response, session
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_bcrypt import Bcrypt
 from sqlalchemy import func, case, literal_column
 from sklearn.linear_model import LinearRegression
@@ -25,6 +26,10 @@ from config import Config
 app = Flask(__name__)
 app.config.from_object(Config)
 
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db.init_app(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -32,6 +37,20 @@ jwt = JWTManager(app)
 # Create database tables
 with app.app_context():
     db.create_all()
+
+    # This automatically upgrades 'tanvi' to admin status
+    admin_user = User.query.filter_by(username='tanvi').first()
+    if admin_user:
+        if admin_user.role != 'admin':
+            admin_user.role = 'admin'
+            db.session.commit()
+            print("✅ Account 'tanvi' elevated to Admin!")
+        else:
+            print("ℹ️ Account 'tanvi' is already an Admin.")
+    else:
+        print("❌ 'tanvi' not found in database. Please register first.")
+
+
 
 # ---------------- UTILS & MULTI-BUSINESS HELPER ----------------
 def get_active_biz_id():
@@ -45,6 +64,14 @@ def get_active_biz_id():
             return first_biz.id
     return biz_id
 
+@app.route('/')
+def index():
+    # If the user is logged in, redirect them to the dashboard automatically
+    # (Update this check based on how you store your user session)
+    if 'user_id' in session: 
+        return redirect(url_for('dashboard'))
+        
+    return render_template('landing.html')
 
 # ---------------- REGISTER ----------------
 @app.route('/register', methods=['GET', 'POST'])
@@ -81,6 +108,11 @@ def login():
     if request.method == 'POST':
         user = User.query.filter_by(username=request.form['username']).first()
         if user and bcrypt.check_password_hash(user.password, request.form['password']):
+
+            # --- MANDATORY: TRACK LOGIN ---
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
             access_token = create_access_token(identity=str(user.id),
                                                additional_claims={"role": user.role})
             response = redirect(url_for('dashboard'))
@@ -107,6 +139,11 @@ def admin_users():
     if current_user.role != 'admin':
         flash("Access Denied!", "danger")
         return redirect(url_for('dashboard'))
+    
+    # --- MANDATORY: RE-CHALLENGE PASSWORD ---
+    # We check a small session flag. If it's not there, they must verify.
+    if not session.get('admin_panel_unlocked'):
+        return render_template('admin_verify.html')
 
     all_users = User.query.all()
     
@@ -121,6 +158,22 @@ def admin_users():
     }
     
     return render_template('admin_users.html', users=all_users, stats=global_stats)
+
+# The handler for that verification page
+@app.route('/admin/verify_gate', methods=['POST'])
+@jwt_required()
+def admin_verify_gate():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    password = request.form.get('password')
+
+    if user and bcrypt.check_password_hash(user.password, password):
+        session['admin_panel_unlocked'] = True # Unlock for this session
+        return redirect(url_for('admin_users'))
+    
+    flash("Incorrect Admin Password!", "danger")
+    return redirect(url_for('dashboard'))
+
 
 # ------------- DELETE USER (Admin Only) -------------
 @app.route('/admin/delete_user/<int:user_id>')
@@ -664,6 +717,25 @@ def update_business_name(biz_id):
         flash(f"Business renamed to {new_name}", "success")
     return redirect(url_for('profile'))
 
+
+#---------------Admin Verfiy---------------
+@app.route('/api/admin/verify', methods=['POST'])
+@jwt_required()
+def admin_verify():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    data = request.get_json()
+    if check_password_hash(user.password, data.get('password')):
+        # Create a short-lived token (e.g., 15 mins) specifically for Admin actions
+        admin_token = create_access_token(
+            identity=current_user_id, 
+            additional_claims={"admin_access": True},
+            expires_delta=timedelta(minutes=15)
+        )
+        return jsonify({"admin_token": admin_token}), 200
+    return jsonify({"msg": "Invalid Admin Password"}), 401
+
 #---------------Setup admin access-------------
 @app.route('/setup_admin_access')
 def setup_admin_access():
@@ -682,9 +754,73 @@ def setup_admin_access():
         return f"Success! Elevated: {', '.join(updated)}. Now log out and log back in."
     return "No users found. Did you register those usernames on the LIVE site yet?"
 
+# ------------- ADMIN: CHANGE ANY USER PASSWORD -------------
+@app.route('/admin/force_password/<int:user_id>', methods=['POST'])
+@jwt_required()
+def admin_force_password(user_id):
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({"msg": "Unauthorized"}), 403
+
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get('new_password')
+    
+    if new_password:
+        # Use bcrypt to match your registration style
+        user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db.session.commit()
+        flash(f"Password for {user.username} has been reset by Admin.", "success")
+    
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/export_system_logs')
+@jwt_required()
+def export_system_logs():
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return "Unauthorized", 403
+
+    # Fetch all users
+    users = User.query.all()
+    
+    # Prepare data for the CSV
+    log_data = []
+    for user in users:
+        log_data.append({
+            "Username": user.username,
+            "Email": user.email,
+            "Role": user.role,
+            "Account Created": user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else "N/A",
+            "Last Login": user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else "Never",
+            "Last Logout": user.last_logout.strftime('%Y-%m-%d %H:%M') if user.last_logout else "Never",
+            "Businesses Managed": len(user.businesses)
+        })
+
+    # Create DataFrame and convert to CSV
+    df = pd.DataFrame(log_data)
+    
+    output = io.StringIO()
+    df.to_csv(output, index=False)
+    
+    # Return as a downloadable file
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=ProfitPulse_System_Audit_Log.csv"}
+    )
+
 # ---------------- LOGOUT ----------------
 @app.route('/logout')
+@jwt_required()
 def logout():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    
+    # --- MANDATORY: TRACK LOGOUT ---
+    if user:
+        user.last_logout = datetime.utcnow()
+        db.session.commit()
+
     response = redirect(url_for('login'))
     unset_jwt_cookies(response)
     session.clear()

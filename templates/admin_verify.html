@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh; font-family: 'Inter', sans-serif;">
+    <div class="card" style="background: #1a1a1a; padding: 40px; border-radius: 12px; border: 1px solid #e74c3c; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        
+        <div style="font-size: 50px; margin-bottom: 20px;">🛡️</div>
+        
+        <h2 style="color: white; margin-bottom: 10px; font-weight: 600;">Identity Verification</h2>
+        <p style="color: #888; font-size: 14px; margin-bottom: 30px; line-height: 1.5;">
+            You are entering a high-clearance zone. Please re-enter your administrator password to unlock the Control Center.
+        </p>
+        
+        <form action="{{ url_for('admin_verify_gate') }}" method="POST">
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="color: #00adb5; font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block;">ADMIN PASSWORD</label>
+                <input type="password" name="password" placeholder="••••••••" required autofocus
+                       style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #333; background: #111; color: white; outline: none; transition: border 0.3s;">
+            </div>
+            
+            <button type="submit" style="width: 100%; padding: 14px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: opacity 0.3s;"
+                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                Verify & Unlock Center
+            </button>
+        </form>
+
+        <div style="margin-top: 25px; border-top: 1px solid #222; padding-top: 15px;">
+            <a href="{{ url_for('dashboard') }}" style="color: #888; text-decoration: none; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                ← Cancel and Exit
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    input:focus {
+        border-color: #00adb5 !important;
+    }
+</style>
+{% endblock %}
