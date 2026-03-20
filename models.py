@@ -26,10 +26,10 @@ class Business(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    products = db.relationship('Product', backref='business', lazy=True)
-    transactions = db.relationship('Transaction', backref='business', lazy=True)
-    sales = db.relationship('Sale', backref='business', lazy=True)
-    reports = db.relationship('Report', backref='business', lazy=True)
+    products = db.relationship('Product', backref='business',cascade="all, delete-orphan", lazy=True)
+    transactions = db.relationship('Transaction', backref='business',cascade="all, delete-orphan", lazy=True)
+    sales = db.relationship('Sale', backref='business',cascade="all, delete-orphan", lazy=True)
+    reports = db.relationship('Report', backref='business',cascade="all, delete-orphan", lazy=True)
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)

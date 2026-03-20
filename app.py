@@ -831,5 +831,9 @@ def logout():
 def home():
     return redirect(url_for('login'))
 
+with app.app_context():
+    db.drop_all()  # This clears the old broken tables
+    db.create_all() # This creates new tables with your "Cascade" rules
+
 if __name__ == '__main__':
     app.run(debug=True)
