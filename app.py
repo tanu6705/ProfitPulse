@@ -835,5 +835,18 @@ with app.app_context():
     db.drop_all()  # This clears the old broken tables
     db.create_all() # This creates new tables with your "Cascade" rules
 
+    # --- ADD THIS CODE BELOW ---
+    from models import User  # Make sure 'User' matches your model name
+    
+    # Check if the user 'tanvi' exists (since you just signed up)
+    user = User.query.filter_by(username='tanvi').first()
+    
+    if user:
+        # Update this line to match your exact column name (is_admin or role)
+        user.role = 'admin'
+        db.session.commit()
+        print("Success: tanvi is now an Admin!")
+    # ---------------------------
+
 if __name__ == '__main__':
     app.run(debug=True)
