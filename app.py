@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sqlalchemy import union_all
 from flask_jwt_extended import get_jwt, get_jwt_identity
 from flask import render_template_string
+from prophet import Prophet
 
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required,
@@ -484,12 +485,11 @@ def sales():
         flash("Stock Error!", "danger")
     return render_template('sales.html', products=products)
 
-# ---------------- ANALYTICS (AI INTEGRATED) ----------------
+# ---------------- ANALYTICS (PROPHET INTEGRATED) ----------------
 @app.route('/analytics')
 @jwt_required()
 def analytics():
     biz_id = get_active_biz_id()
-    # CRITICAL: Fetch the business object so the template can show the name
     active_biz = Business.query.get(biz_id)
     
     # 1. Fetch Sales and COGS grouped by month
@@ -499,49 +499,77 @@ def analytics():
         func.sum(Sale.cogs)
     ).filter_by(business_id=biz_id).group_by('month').order_by('month').all()
 
-    # Format: [Month, Income, Cost, Profit]
     monthly_chart = []
-    for r in raw_data:
-        # Converting "2026-03" to "Mar 2026" for a better look on charts
-        month_label = datetime.strptime(r[0], "%Y-%m").strftime("%b %Y")
-        monthly_chart.append([month_label, float(r[1]), float(r[2]), float(r[1] - r[2])])
+    prophet_records = []
 
-    # Initialize defaults for AI logic
+    for r in raw_data:
+        month_str = r[0] # "YYYY-MM"
+        month_label = datetime.strptime(month_str, "%Y-%m").strftime("%b %Y")
+        income = float(r[1] or 0)
+        cogs = float(r[2] or 0)
+        profit = income - cogs
+        
+        monthly_chart.append([month_label, income, cogs, profit])
+        
+        # Format for Prophet: requires 'ds' (datetimes) and 'y' (values)
+        prophet_records.append({'ds': f"{month_str}-01", 'y': profit})
+
+    # Initialize metrics
     growth_percent = 0
     profit_margin = 0
     next_month_val = 0
     forecast_data = []
 
-    # 2. AI LINEAR REGRESSION LOGIC
-    if len(monthly_chart) >= 2:
-        X = np.array(range(len(monthly_chart))).reshape(-1, 1)
-        y = np.array([row[3] for row in monthly_chart]) 
+    # 2. PROPHET TIME-SERIES FORECASTING
+    if len(prophet_records) >= 2:
+        df = pd.DataFrame(prophet_records)
+        df['ds'] = pd.to_datetime(df['ds'])
 
-        model = LinearRegression()
-        model.fit(X, y)
+        # Business-oriented Prophet Configuration
+        model = Prophet(
+            interval_width=0.95,
+            growth='linear',
+            yearly_seasonality=True,          # Captures annual business/holiday cycles
+            weekly_seasonality=False,         # False because data is aggregated monthly
+            daily_seasonality=False,          # False for daily/hourly metrics
+            seasonality_mode='multiplicative' # Seasonal swings scale proportionally as business grows
+        )
         
-        next_idx = np.array([[len(monthly_chart)]])
-        next_month_val = max(0, model.predict(next_idx)[0])
+        # Optional: Adds US national holidays impact
+        model.add_country_holidays(country_name='US')
 
-        for i in range(1, 7):
-            future_idx = np.array([[len(monthly_chart) + i - 1]])
-            pred = model.predict(future_idx)[0]
-            future_date = (datetime.now() + timedelta(days=30*i)).strftime("%b %Y")
-            forecast_data.append([future_date, round(max(0, pred), 2)])
+        model.fit(df)
 
+        # Create future dataframe for 6 months ahead ('MS' = Month Start)
+        future = model.make_future_dataframe(periods=6, freq='MS')
+        forecast = model.predict(future)
+
+        # Extract future predictions (tail 6)
+        future_predictions = forecast.tail(6)
+
+        for _, row in future_predictions.iterrows():
+            future_date = row['ds'].strftime("%b %Y")
+            pred_value = round(max(0, float(row['yhat'])), 2)
+            forecast_data.append([future_date, pred_value])
+
+        # Next month predicted value
+        if forecast_data:
+            next_month_val = forecast_data[0][1]
+
+        # Calculate MoM growth percentage from recent historical data
         curr_profit = monthly_chart[-1][3]
         prev_profit = monthly_chart[-2][3]
         if prev_profit != 0:
             growth_percent = round(((curr_profit - prev_profit) / abs(prev_profit)) * 100, 2)
     
+    # Calculate Profit Margin
     if len(monthly_chart) >= 1:
         latest = monthly_chart[-1]
         if latest[1] > 0:
             profit_margin = round((latest[3] / latest[1]) * 100, 2)
 
-    # Pass everything to the template
     return render_template("analytics.html", 
-                           active_biz=active_biz, # Added this
+                           active_biz=active_biz,
                            monthly_chart=monthly_chart,
                            forecast_data=forecast_data, 
                            growth_percent=growth_percent, 
